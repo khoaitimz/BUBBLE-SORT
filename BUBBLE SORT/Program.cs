@@ -4,7 +4,7 @@ internal class Program
 {
     private static void Main(string[] args)
     {
-        int[] array = { 64, 34, 25, 12, 22, 11, 90 };
+        int[] array = { 67, 36, 24, 12, 26, 13, 69, 96 };
         Console.WriteLine("Unsorted array:");
         PrintArray(array);
         BubbleSort(array);
