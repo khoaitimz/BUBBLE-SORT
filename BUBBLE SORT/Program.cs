@@ -72,10 +72,7 @@ internal class Program
         BubbleSort(array);
 
         Console.WriteLine("\n--- Sau khi sắp xếp ---");
-        Console.WriteLine("Giá trị tại cùng 10 vị trí ngẫu nhiên đó:");
         PrintRandomSample(array, randomIndices);
-
-        Console.WriteLine("\nNhấn phím bất kỳ để thoát...");
         Console.ReadKey();
     }
 
