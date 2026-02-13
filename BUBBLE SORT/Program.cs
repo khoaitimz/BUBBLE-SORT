@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 
 static class Timing
 {
@@ -45,37 +43,57 @@ internal class Program
         int[] array = new int[size];
         Random rnd = new Random();
 
-        // Khởi tạo mảng với giá trị ngẫu nhiên
-        for (int i = 0; i < array.Length; i++)
+        // 1. Khởi tạo mảng chính
+        for (int i = 0; i < size; i++)
         {
             array[i] = rnd.Next(1, 1000);
         }
 
-        // Chọn ra 10 vị trí ngẫu nhiên cố định để quan sát trước và sau
-        int[] randomIndices = Enumerable.Range(0, size).OrderBy(x => rnd.Next()).Take(10).ToArray();
-        Array.Sort(randomIndices); // Sắp xếp chỉ số để dễ nhìn theo thứ tự mảng
+        // 2. Lấy 10 vị trí ngẫu nhiên không dùng LINQ
+        int[] allIndices = new int[size];
+        for (int i = 0; i < size; i++) allIndices[i] = i;
 
+        // Trộn mảng chỉ số (Fisher-Yates Shuffle)
+        for (int i = size - 1; i > 0; i--)
+        {
+            int j = rnd.Next(0, i + 1);
+            int temp = allIndices[i];
+            allIndices[i] = allIndices[j];
+            allIndices[j] = temp;
+        }
+
+        // Lấy 10 phần tử đầu tiên sau khi trộn
+        int[] randomIndices = new int[10];
+        for (int i = 0; i < 10; i++) randomIndices[i] = allIndices[i];
+
+        // Sắp xếp lại các chỉ số để khi in ra màn hình theo thứ tự từ nhỏ đến lớn
+        BubbleSort(randomIndices);
+
+        // 3. Hiển thị trước khi sắp xếp
         Console.WriteLine($"Mảng gốc ({size} phần tử). Giá trị tại 10 vị trí ngẫu nhiên:");
         PrintRandomSample(array, randomIndices);
 
-        // Đo thời gian (vẫn dùng vòng lặp nội bộ để hiện rõ ms)
+        // 4. Đo thời gian (Lặp lại 5000 lần mỗi vòng đo để thấy ms)
         Timing.Measure(() =>
         {
             for (int k = 0; k < 5000; k++)
             {
-                int[] copy = (int[])array.Clone();
+                int[] copy = new int[size];
+                Array.Copy(array, copy, size); 
                 BubbleSort(copy);
             }
         }, 50);
 
-        // Sắp xếp mảng thật
+        // 5. Sắp xếp mảng thật và hiển thị
         BubbleSort(array);
 
         Console.WriteLine("\n--- Sau khi sắp xếp ---");
         PrintRandomSample(array, randomIndices);
+
         Console.ReadKey();
     }
 
+    // Tận dụng hàm BubbleSort của bạn cho cả mảng dữ liệu và mảng chỉ số
     public static void BubbleSort(int[] arr)
     {
         int n = arr.Length;
@@ -96,13 +114,13 @@ internal class Program
         }
     }
 
-    // Hàm in giá trị tại các chỉ số ngẫu nhiên được chỉ định
     private static void PrintRandomSample(int[] arr, int[] indices)
     {
-        foreach (int idx in indices)
+        for (int i = 0; i < indices.Length; i++)
         {
-            Console.Write($" {arr[idx]} | ");
+            int idx = indices[i];
+            Console.Write($"{arr[idx]} | ");
         }
-        Console.WriteLine("\n");
+        Console.WriteLine();
     }
 }
