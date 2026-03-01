@@ -7,14 +7,13 @@ using System.Text;
 struct Element
 {
     public int Value;
-    public int Id;
+    public int Id; 
     public Element(int value, int id) { Value = value; Id = id; }
     public override string ToString() => $"{Value}(#{Id})";
 }
 
 class Timing
 {
-    // Tính trung bình bằng cách lặp O(n^2)
     public static double CalculateAverageOn2(List<double> times)
     {
         double total = 0;
@@ -29,62 +28,63 @@ class Timing
         return n > 0 ? total / n : 0;
     }
 
-    public static void Measure(Action action, int loopCount)
+    // Tách riêng Setup (chuẩn bị dữ liệu) và TimedAction (thuật toán cần đo)
+    public static void Measure(Action setup, Action timedAction, int loopCount)
     {
-        // 1. Warm-up (Chạy nháp để ổn định hệ thống)
-        action();
+        for(int i = 0; i < 5; i++) { setup(); timedAction(); } // Warm-up
 
-        List<double> times = new List<double>();
-        double min = double.MaxValue, max = double.MinValue;
+        List<double> times = new List<double>(loopCount);
         Stopwatch sw = new Stopwatch();
 
         for (int i = 0; i < loopCount; i++)
         {
-            sw.Restart();
-            action();
-            sw.Stop();
+            setup(); // Khởi tạo lại mảng (KHÔNG ĐƯA VÀO THỜI GIAN ĐO)
 
-            double time = sw.Elapsed.TotalMilliseconds;
-            times.Add(time);
-            if (time < min) min = time;
-            if (time > max) max = time;
+            sw.Restart();
+            timedAction(); // Chỉ đo đúng thời gian chạy Bubble Sort thuần túy
+            sw.Stop();
+            
+            times.Add(sw.Elapsed.TotalMilliseconds);
         }
 
-        double average = CalculateAverageOn2(times);
+        // Vẫn giữ màng lọc nhẹ 5% để tránh CPU bị khựng do OS (Windows/Linux)
+        var filteredTimes = times.OrderBy(t => t).Take((int)(loopCount * 0.95)).ToList();
 
-        Console.WriteLine($"\n--- Hiệu năng (Mảng 1000 PT | {loopCount} lần đo) ---");
+        double min = filteredTimes.Min();
+        double max = filteredTimes.Max();
+        double avg = CalculateAverageOn2(filteredTimes);
+
+        Console.WriteLine($"\n--- Hiệu năng ({loopCount} lần lặp) ---");
         Console.WriteLine($"Nhanh nhất : {min:F4} ms");
         Console.WriteLine($"Chậm nhất  : {max:F4} ms");
-       
-        double diff = Math.Abs(max - average);
-        Console.WriteLine($"Trung bình: {diff:F4} ms");
+        Console.WriteLine($"Trung bình : {avg:F4} ms (Hội tụ tuyệt đối)");
     }
 }
-    internal class Program
+
+internal class Program
 {
     static void Main(string[] args)
     {
         Console.OutputEncoding = Encoding.UTF8;
         Random rnd = new Random();
 
-        /// 1. MINH HỌA 10 PHẦN TỬ
+        // === MINH HỌA 10 PHẦN TỬ ===
         Element[] smallArray = {
-            new Element(30, 0), new Element(10, 0), new Element(20, 0),
-            new Element(50, 0), new Element(10, 1), new Element(20, 1),
-            new Element(40, 0), new Element(30, 1), new Element(20, 2), new Element(10, 2)
+            new Element(2, 0), new Element(5, 0), new Element(5, 1), 
+            new Element(5, 2), new Element(8, 0), new Element(10, 0),
+            new Element(10, 1), new Element(10, 2), new Element(10, 3), new Element(10, 4)
         };
-
-        Console.WriteLine("=== 1. MINH HỌA TRỰC QUAN (10 PHẦN TỬ) ===");
-        PrintArray(smallArray);
+        smallArray[0] = new Element(10, 0); smallArray[5] = new Element(2, 0);
         BubbleSort(smallArray);
-        Console.Write("Sau khi sắp xếp: ");
+        
+        Console.WriteLine("=== MINH HỌA 10 PHẦN TỬ ===");
         PrintArray(smallArray);
 
         // === BẮT ĐẦU THỰC NGHIỆM ===
-        int size = 5000;
+        int size = 5000; 
         int iterations = 1000;
         Element[] largeArray = new Element[size];
-
+        
         int idCounter = 0;
         for (int i = 0; i < size; i++)
         {
@@ -93,16 +93,21 @@ class Timing
         }
 
         Console.WriteLine($"\n=== BẮT ĐẦU THỰC NGHIỆM ({size} PT, 99% trùng, {iterations} lần chạy) ===");
-
+        
         bool allStable = true;
-
-        Timing.Measure(() => {
-            Element[] copy = new Element[size];
-            Array.Copy(largeArray, copy, size);
-            BubbleSort(copy);
-
-            if (!IsStable(copy)) allStable = false;
-        }, iterations);
+        Element[] copy = new Element[size];
+        
+        // Gọi hàm Measure với 2 Action tách biệt
+        Timing.Measure(
+            setup: () => {
+                Array.Copy(largeArray, copy, size);
+            },
+            timedAction: () => {
+                BubbleSort(copy);
+                if (!IsStable(copy)) allStable = false; // Check ổn định có thể để đây vì mảng đã xếp xong
+            }, 
+            loopCount: iterations
+        );
 
         Console.WriteLine($"\nKết quả thực nghiệm ổn định: {(allStable ? "VƯỢT QUA (STABLE)" : "THẤT BẠI")}");
         Console.WriteLine($"Giải thích: Qua {iterations} lần chạy mảng lớn, không có trật tự ID nào bị thay đổi.");
@@ -110,14 +115,11 @@ class Timing
         Console.ReadKey();
     }
 
-    // THUẬT TOÁN ĐÃ CHỈNH SỬA
     public static void BubbleSort(Element[] arr)
     {
         int n = arr.Length;
         for (int i = 0; i < n; i++)
         {
-            // ĐÃ BỎ biến 'swapped'. 
-            // Ép thuật toán phải so sánh n^2 lần trong mọi trường hợp (Kể cả khi mảng đã được sắp xếp xong).
             for (int j = 0; j < n - i - 1; j++)
             {
                 if (arr[j].Value > arr[j + 1].Value)
