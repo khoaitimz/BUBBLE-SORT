@@ -52,7 +52,7 @@ class Timing
 
         double average = CalculateAverageOn2(times);
 
-        Console.WriteLine($"\n--- Hiệu năng (Mảng 1000 PT | {loopCount} lần đo) ---");
+        Console.WriteLine($"\n--- Hiệu năng (Mảng 5000 PT | {loopCount} lần đo) ---");
         Console.WriteLine($"Nhanh nhất : {min:F4} ms");
         Console.WriteLine($"Chậm nhất  : {max:F4} ms");
        
